@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,6 +21,7 @@ import io.jsonwebtoken.JwtException;
 import java.io.IOException;
 
 @Component
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter{
     @Autowired
     private UserDetailsService userDetailsService;
@@ -47,6 +49,7 @@ public class JwtFilter extends OncePerRequestFilter{
                 }
             }
         } catch (JwtException | IllegalArgumentException exception) {
+            log.warn("JWT authentication failed path={} message={}", request.getRequestURI(), exception.getMessage());
             SecurityContextHolder.clearContext();
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT token");
             return;

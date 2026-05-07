@@ -33,3 +33,6 @@ build/
 .vscode/
 
 .codex
+.env
+**/.env
+.attach_pid*

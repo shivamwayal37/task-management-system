@@ -1,19 +1,11 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: task-management-system
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      idle-timeout: 30000
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   flyway:
     enabled: true
@@ -32,11 +24,4 @@ spring:
 logging:
   level:
     root: INFO
-    org.springframework: INFO
-    org.hibernate.SQL: DEBUG
-    com.example.taskmanager: DEBUG
-
-security:
-  jwt:
-    secret: ${JWT_SECRET:4aa5ec6209a7ed1e57bff4ae531ac859dc7c3ae646af096fca1961d178200ded}
-    expiration-ms: ${JWT_EXPIRATION_MS:3000000}
+    org.springframework: WARN

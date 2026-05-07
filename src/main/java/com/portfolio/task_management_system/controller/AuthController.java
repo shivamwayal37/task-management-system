@@ -13,9 +13,11 @@ import com.portfolio.task_management_system.dto.LoginRequest;
 import com.portfolio.task_management_system.utils.JwtUtil;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -28,9 +30,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        log.info("Login attempt for user {}", request.getName());
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getName(), request.getPassword()));
 
+        log.info("Login successful for user {}", request.getName());
         return ResponseEntity.ok(new AuthResponse(jwtUtil.generateToken(request.getName())));
     }
 }

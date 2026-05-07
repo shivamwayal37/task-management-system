@@ -1,7 +1,6 @@
 package com.portfolio.task_management_system.service;
 
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +17,10 @@ import com.portfolio.task_management_system.mapper.TaskMapper;
 import com.portfolio.task_management_system.repository.TaskRepository;
 import com.portfolio.task_management_system.repository.UserRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class TaskService {
     
     @Autowired
@@ -29,16 +31,24 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     public TaskDTO createTask(Long userId, CreateTaskRequest request){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
-        Task task = TaskMapper.toEntity(request);
-        task.setUser(user);
-        Task savedTask = taskRepository.save(task);
-        return TaskMapper.toDTO(savedTask);
+        log.info("Creating task for user {}", userId);
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new UserNotFoundException(userId));
+            Task task = TaskMapper.toEntity(request);
+            task.setUser(user);
+            Task savedTask = taskRepository.save(task);
+            log.info("Created task {} for user {}", savedTask.getId(), userId);
+            return TaskMapper.toDTO(savedTask);
+        } catch (RuntimeException ex) {
+            log.error("Task creation failed for user {}", userId, ex);
+            throw ex;
+        }
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public List<TaskDTO> getAllTasks() {
+        log.info("Fetching all tasks");
         return taskRepository.findAll()
                 .stream()
                 .map(TaskMapper::toDTO)
@@ -47,6 +57,7 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     public Page<TaskDTO> getTasksByUserId(Long userId, Pageable pageable) {
+        log.info("Fetching tasks for user {}", userId);
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException(userId);
         }
@@ -57,12 +68,14 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public TaskDTO getTaskById(Long id) {
+        log.info("Fetching task {}", id);
         Task task = getTaskEntityById(id);
         return TaskMapper.toDTO(task);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public TaskDTO getTask(String title){
+        log.info("Searching task by title {}", title);
         Task task = taskRepository.findByTitle(title);
         if (task == null) {
             throw new TaskNotFoundException(title);
@@ -73,16 +86,21 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public TaskDTO updateTask(Long id, CreateTaskRequest request) {
+        log.info("Updating task {}", id);
         Task task = getTaskEntityById(id);
         TaskMapper.updateEntity(task, request);
 
-        return TaskMapper.toDTO(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        log.info("Updated task {}", savedTask.getId());
+        return TaskMapper.toDTO(savedTask);
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public void deleteTask(Long id){
+        log.info("Deleting task {}", id);
         Task task = getTaskEntityById(id);
         taskRepository.delete(task);
+        log.info("Deleted task {}", id);
     }
 
     private Task getTaskEntityById(Long id) {
