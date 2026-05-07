@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import com.portfolio.task_management_system.dto.CreateTaskRequest;
@@ -26,6 +27,7 @@ public class TaskService {
     @Autowired
     private UserRepository userRepository;
 
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     public TaskDTO createTask(Long userId, CreateTaskRequest request){
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
@@ -35,6 +37,7 @@ public class TaskService {
         return TaskMapper.toDTO(savedTask);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public List<TaskDTO> getAllTasks() {
         return taskRepository.findAll()
                 .stream()
@@ -42,6 +45,7 @@ public class TaskService {
                 .toList();
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     public Page<TaskDTO> getTasksByUserId(Long userId, Pageable pageable) {
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException(userId);
@@ -51,11 +55,13 @@ public class TaskService {
                 .map(TaskMapper::toDTO);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public TaskDTO getTaskById(Long id) {
         Task task = getTaskEntityById(id);
         return TaskMapper.toDTO(task);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     public TaskDTO getTask(String title){
         Task task = taskRepository.findByTitle(title);
         if (task == null) {
@@ -65,6 +71,7 @@ public class TaskService {
         return TaskMapper.toDTO(task);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public TaskDTO updateTask(Long id, CreateTaskRequest request) {
         Task task = getTaskEntityById(id);
         TaskMapper.updateEntity(task, request);
@@ -72,6 +79,7 @@ public class TaskService {
         return TaskMapper.toDTO(taskRepository.save(task));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     public void deleteTask(Long id){
         Task task = getTaskEntityById(id);
         taskRepository.delete(task);

@@ -35,3 +35,8 @@ logging:
     org.springframework: INFO
     org.hibernate.SQL: DEBUG
     com.example.taskmanager: DEBUG
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:4aa5ec6209a7ed1e57bff4ae531ac859dc7c3ae646af096fca1961d178200ded}
+    expiration-ms: ${JWT_EXPIRATION_MS:3000000}

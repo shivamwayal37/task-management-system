@@ -24,9 +24,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    // Future-proofing for auth (ROLE_USER, ROLE_ADMIN)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role;
+    private UserRole role;
 
     // One user → many tasks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
