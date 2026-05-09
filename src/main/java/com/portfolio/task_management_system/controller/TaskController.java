@@ -1,8 +1,8 @@
 package com.portfolio.task_management_system.controller;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,8 +29,9 @@ public class TaskController {
     private TaskService taskService;
 
     @GetMapping
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
-        return ResponseEntity.ok(taskService.getAllTasks());
+    public ResponseEntity<Page<TaskDTO>> getTasks(Pageable pageable,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(taskService.getTasks(pageable, status));
     }
 
     @GetMapping("/{id}")
