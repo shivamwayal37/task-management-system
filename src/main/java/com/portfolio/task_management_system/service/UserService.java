@@ -2,6 +2,8 @@ package com.portfolio.task_management_system.service;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,7 @@ public class UserService{
         log.info("Creating user with name {}", request.getName());
         User user = UserMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(UserRole.USER);
+        user.setRole(UserRole.ADMIN);
         User savedUser = userRepository.save(user);
         log.info("Created user {}", savedUser.getId());
         return UserMapper.toDTO(savedUser);
@@ -45,8 +47,10 @@ public class UserService{
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(value = "users", key = "#id")
     public UserDTO getUserById(Long id) {
         log.info("Fetching user {}", id);
+        log.info("Fetching tasks from DB");
         User user = getUserEntityById(id);
         return UserMapper.toDTO(user);
     }
@@ -63,6 +67,7 @@ public class UserService{
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @CacheEvict(value = "users", key = "#id")
     public UserDTO updateUser(Long id, CreateUserRequest request) {
         log.info("Updating user {}", id);
         User user = getUserEntityById(id);
@@ -76,6 +81,7 @@ public class UserService{
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @CacheEvict(value = "users", key = "#id")
     public void deleteUser(Long id){
         log.info("Deleting user {}", id);
         User user = getUserEntityById(id);

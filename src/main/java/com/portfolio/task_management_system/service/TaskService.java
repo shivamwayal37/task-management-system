@@ -1,7 +1,8 @@
 package com.portfolio.task_management_system.service;
 
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import com.portfolio.task_management_system.dto.CreateTaskRequest;
 import com.portfolio.task_management_system.dto.TaskDTO;
 import com.portfolio.task_management_system.entity.Task;
+import com.portfolio.task_management_system.entity.TaskStatus;
 import com.portfolio.task_management_system.entity.User;
 import com.portfolio.task_management_system.exception.TaskNotFoundException;
 import com.portfolio.task_management_system.exception.UserNotFoundException;
@@ -30,6 +32,7 @@ public class TaskService {
     private UserRepository userRepository;
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
+    @CacheEvict(value = "tasks", allEntries = true)
     public TaskDTO createTask(Long userId, CreateTaskRequest request){
         log.info("Creating task for user {}", userId);
         try {
@@ -47,12 +50,21 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    public List<TaskDTO> getAllTasks() {
-        log.info("Fetching all tasks");
-        return taskRepository.findAll()
-                .stream()
-                .map(TaskMapper::toDTO)
-                .toList();
+    @Cacheable(
+            value = "tasks",
+            key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString() + '-' + (#status == null ? 'ALL' : #status)")
+    public Page<TaskDTO> getTasks(Pageable pageable, String status) {
+        log.info("Fetching tasks page={} size={} sort={} status={}",
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                pageable.getSort(),
+                status);
+
+        if (status == null || status.isBlank()) {
+            return taskRepository.findAll(pageable).map(TaskMapper::toDTO);
+        }
+
+        return taskRepository.findByStatus(toStatus(status), pageable).map(TaskMapper::toDTO);
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
@@ -85,6 +97,7 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
+    @CacheEvict(value = "tasks", allEntries = true)
     public TaskDTO updateTask(Long id, CreateTaskRequest request) {
         log.info("Updating task {}", id);
         Task task = getTaskEntityById(id);
@@ -96,6 +109,7 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
+    @CacheEvict(value = "tasks", allEntries = true)
     public void deleteTask(Long id){
         log.info("Deleting task {}", id);
         Task task = getTaskEntityById(id);
@@ -106,5 +120,13 @@ public class TaskService {
     private Task getTaskEntityById(Long id) {
         return taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
+    }
+
+    private TaskStatus toStatus(String status) {
+        try {
+            return TaskStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Invalid task status: " + status);
+        }
     }
 }
