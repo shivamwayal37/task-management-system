@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.portfolio.task_management_system.dto.AuthResponse;
 import com.portfolio.task_management_system.dto.LoginRequest;
+import com.portfolio.task_management_system.entity.User;
+import com.portfolio.task_management_system.audit.AuditService;
+import com.portfolio.task_management_system.repository.UserRepository;
 import com.portfolio.task_management_system.utils.JwtUtil;
 
 import jakarta.validation.Valid;
@@ -22,10 +25,15 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final AuditService auditService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil,
+            UserRepository userRepository, AuditService auditService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     @PostMapping("/login")
@@ -35,6 +43,10 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.getName(), request.getPassword()));
 
         log.info("Login successful for user {}", request.getName());
+        User user = userRepository.findByName(request.getName());
+        if (user != null) {
+            auditService.logAction(user.getId(), "LOGIN", "USER", user.getId(), "User logged in");
+        }
         return ResponseEntity.ok(new AuthResponse(jwtUtil.generateToken(request.getName())));
     }
 }

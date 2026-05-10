@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import com.portfolio.task_management_system.audit.AuditService;
 import com.portfolio.task_management_system.dto.CreateTaskRequest;
 import com.portfolio.task_management_system.dto.TaskDTO;
 import com.portfolio.task_management_system.entity.Task;
@@ -31,6 +32,9 @@ public class TaskService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuditService auditService;
+
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     @CacheEvict(value = "tasks", allEntries = true)
     public TaskDTO createTask(Long userId, CreateTaskRequest request){
@@ -41,6 +45,12 @@ public class TaskService {
             Task task = TaskMapper.toEntity(request);
             task.setUser(user);
             Task savedTask = taskRepository.save(task);
+            auditService.logAction(
+                    "CREATE_TASK",
+                    "TASK",
+                    savedTask.getId(),
+                    "{\"title\":\"%s\",\"status\":\"%s\",\"ownerUserId\":%d}"
+                            .formatted(escapeJson(savedTask.getTitle()), savedTask.getStatus(), user.getId()));
             log.info("Created task {} for user {}", savedTask.getId(), userId);
             return TaskMapper.toDTO(savedTask);
         } catch (RuntimeException ex) {
@@ -101,9 +111,22 @@ public class TaskService {
     public TaskDTO updateTask(Long id, CreateTaskRequest request) {
         log.info("Updating task {}", id);
         Task task = getTaskEntityById(id);
+        TaskStatus previousStatus = task.getStatus();
         TaskMapper.updateEntity(task, request);
 
         Task savedTask = taskRepository.save(task);
+        auditService.logAction(
+                "UPDATE_TASK",
+                "TASK",
+                savedTask.getId(),
+                "{\"title\":\"%s\"}".formatted(escapeJson(savedTask.getTitle())));
+        if (previousStatus != savedTask.getStatus()) {
+            auditService.logAction(
+                    "STATUS_CHANGE",
+                    "TASK",
+                    savedTask.getId(),
+                    "{\"before\":\"%s\",\"after\":\"%s\"}".formatted(previousStatus, savedTask.getStatus()));
+        }
         log.info("Updated task {}", savedTask.getId());
         return TaskMapper.toDTO(savedTask);
     }
@@ -113,7 +136,14 @@ public class TaskService {
     public void deleteTask(Long id){
         log.info("Deleting task {}", id);
         Task task = getTaskEntityById(id);
+        Long taskOwnerId = task.getUser().getId();
+        String title = task.getTitle();
         taskRepository.delete(task);
+        auditService.logAction(
+                "DELETE_TASK",
+                "TASK",
+                id,
+                "{\"title\":\"%s\",\"ownerUserId\":%d}".formatted(escapeJson(title), taskOwnerId));
         log.info("Deleted task {}", id);
     }
 
@@ -128,5 +158,13 @@ public class TaskService {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Invalid task status: " + status);
         }
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
