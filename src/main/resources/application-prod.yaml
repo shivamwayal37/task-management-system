@@ -29,3 +29,9 @@ security:
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:3000000}
+
+rate-limit:
+  capacity: ${RATE_LIMIT_CAPACITY:100}
+  refill-duration: ${RATE_LIMIT_REFILL_DURATION:1m}
+  cleanup-interval: ${RATE_LIMIT_CLEANUP_INTERVAL:5m}
+  bucket-ttl: ${RATE_LIMIT_BUCKET_TTL:15m}

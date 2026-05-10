@@ -30,3 +30,9 @@ security:
     # secret: ${JWT_SECRET:62f2f75c18764dd9be731dfb2d3c3c842667105ba718bc7eddfa459b6f264ca1}
     secret: 62f2f75c18764dd9be731dfb2d3c3c842667105ba718bc7eddfa459b6f264ca1
     expiration-ms: ${JWT_EXPIRATION_MS:3000000}
+
+rate-limit:
+  capacity: ${RATE_LIMIT_CAPACITY:100}
+  refill-duration: ${RATE_LIMIT_REFILL_DURATION:1m}
+  cleanup-interval: ${RATE_LIMIT_CLEANUP_INTERVAL:5m}
+  bucket-ttl: ${RATE_LIMIT_BUCKET_TTL:15m}
