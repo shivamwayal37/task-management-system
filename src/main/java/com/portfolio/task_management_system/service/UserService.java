@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.portfolio.task_management_system.audit.AuditService;
 import com.portfolio.task_management_system.dto.CreateUserRequest;
 import com.portfolio.task_management_system.dto.UserDTO;
 import com.portfolio.task_management_system.entity.User;
@@ -27,11 +28,14 @@ public class UserService{
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AuditService auditService;
+
     public UserDTO createUser(CreateUserRequest request){
         log.info("Creating user with name {}", request.getName());
         User user = UserMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(UserRole.ADMIN);
+        user.setRole(UserRole.USER);
         User savedUser = userRepository.save(user);
         log.info("Created user {}", savedUser.getId());
         return UserMapper.toDTO(savedUser);
@@ -71,11 +75,22 @@ public class UserService{
     public UserDTO updateUser(Long id, CreateUserRequest request) {
         log.info("Updating user {}", id);
         User user = getUserEntityById(id);
+        UserRole previousRole = user.getRole();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            user.setRole(toRole(request.getRole()));
+        }
 
         User savedUser = userRepository.save(user);
+        if (previousRole != savedUser.getRole()) {
+            auditService.logAction(
+                    "ROLE_CHANGE",
+                    "USER",
+                    savedUser.getId(),
+                    "{\"before\":\"%s\",\"after\":\"%s\"}".formatted(previousRole, savedUser.getRole()));
+        }
         log.info("Updated user {}", savedUser.getId());
         return UserMapper.toDTO(savedUser);
     }
@@ -92,5 +107,13 @@ public class UserService{
     private User getUserEntityById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    private UserRole toRole(String role) {
+        try {
+            return UserRole.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Invalid user role: " + role);
+        }
     }
 }
