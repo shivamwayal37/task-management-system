@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.portfolio.task_management_system.filter.JwtFilter;
+import com.portfolio.task_management_system.filter.RateLimitingFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +26,9 @@ public class SpringSecurity {
 
     @Autowired
     private JwtFilter jwtFilter;
+
+    @Autowired
+    private RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -42,6 +46,7 @@ public class SpringSecurity {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitingFilter, JwtFilter.class)
                 .build();
     }
 
