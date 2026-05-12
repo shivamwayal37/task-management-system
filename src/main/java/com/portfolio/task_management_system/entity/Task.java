@@ -2,15 +2,25 @@ package com.portfolio.task_management_system.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tasks")
+@SQLDelete(sql = """
+        UPDATE tasks
+        SET deleted = true,
+            deleted_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        """)
+@SQLRestriction("deleted = false")
 @Data
 public class Task {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
@@ -31,6 +41,13 @@ public class Task {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
+    private Long deletedBy;
 
     @PrePersist
     public void onCreate() {

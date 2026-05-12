@@ -54,4 +54,10 @@ public class TaskController {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<Void> restoreTask(@PathVariable Long id) {
+        taskService.restoreTask(id);
+        return ResponseEntity.noContent().build();
+    }
 }
