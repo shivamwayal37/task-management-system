@@ -37,7 +37,7 @@ public class AuditService {
         auditLogRepository.save(auditLog);
     }
 
-    private Long getCurrentUserId() {
+    public Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return null;

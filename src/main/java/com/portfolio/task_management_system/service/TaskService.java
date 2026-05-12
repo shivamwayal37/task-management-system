@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.portfolio.task_management_system.audit.AuditService;
 import com.portfolio.task_management_system.dto.CreateTaskRequest;
@@ -14,6 +15,8 @@ import com.portfolio.task_management_system.dto.TaskDTO;
 import com.portfolio.task_management_system.entity.Task;
 import com.portfolio.task_management_system.entity.TaskStatus;
 import com.portfolio.task_management_system.entity.User;
+import com.portfolio.task_management_system.event.TaskEventPublisher;
+import com.portfolio.task_management_system.event.TaskUpdatedEvent;
 import com.portfolio.task_management_system.exception.TaskNotFoundException;
 import com.portfolio.task_management_system.exception.UserNotFoundException;
 import com.portfolio.task_management_system.mapper.TaskMapper;
@@ -35,8 +38,12 @@ public class TaskService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private TaskEventPublisher taskEventPublisher;
+
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
     public TaskDTO createTask(Long userId, CreateTaskRequest request){
         log.info("Creating task for user {}", userId);
         try {
@@ -51,6 +58,7 @@ public class TaskService {
                     savedTask.getId(),
                     "{\"title\":\"%s\",\"status\":\"%s\",\"ownerUserId\":%d}"
                             .formatted(escapeJson(savedTask.getTitle()), savedTask.getStatus(), user.getId()));
+            publishTaskEvent(savedTask, "CREATE_TASK");
             log.info("Created task {} for user {}", savedTask.getId(), userId);
             return TaskMapper.toDTO(savedTask);
         } catch (RuntimeException ex) {
@@ -63,6 +71,7 @@ public class TaskService {
     @Cacheable(
             value = "tasks",
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString() + '-' + (#status == null ? 'ALL' : #status)")
+    @Transactional(readOnly = true)
     public Page<TaskDTO> getTasks(Pageable pageable, String status) {
         log.info("Fetching tasks page={} size={} sort={} status={}",
                 pageable.getPageNumber(),
@@ -78,6 +87,7 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
+    @Transactional(readOnly = true)
     public Page<TaskDTO> getTasksByUserId(Long userId, Pageable pageable) {
         log.info("Fetching tasks for user {}", userId);
         if (!userRepository.existsById(userId)) {
@@ -89,6 +99,7 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
+    @Transactional(readOnly = true)
     public TaskDTO getTaskById(Long id) {
         log.info("Fetching task {}", id);
         Task task = getTaskEntityById(id);
@@ -96,9 +107,10 @@ public class TaskService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
     public TaskDTO getTask(String title){
         log.info("Searching task by title {}", title);
-        Task task = taskRepository.findByTitle(title);
+        Task task = taskRepository.findWithUserByTitle(title);
         if (task == null) {
             throw new TaskNotFoundException(title);
         }
@@ -108,6 +120,7 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
     public TaskDTO updateTask(Long id, CreateTaskRequest request) {
         log.info("Updating task {}", id);
         Task task = getTaskEntityById(id);
@@ -120,12 +133,14 @@ public class TaskService {
                 "TASK",
                 savedTask.getId(),
                 "{\"title\":\"%s\"}".formatted(escapeJson(savedTask.getTitle())));
+        publishTaskEvent(savedTask, "UPDATE_TASK");
         if (previousStatus != savedTask.getStatus()) {
             auditService.logAction(
                     "STATUS_CHANGE",
                     "TASK",
                     savedTask.getId(),
                     "{\"before\":\"%s\",\"after\":\"%s\"}".formatted(previousStatus, savedTask.getStatus()));
+            publishTaskEvent(savedTask, "STATUS_CHANGE");
         }
         log.info("Updated task {}", savedTask.getId());
         return TaskMapper.toDTO(savedTask);
@@ -133,22 +148,50 @@ public class TaskService {
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
     public void deleteTask(Long id){
         log.info("Deleting task {}", id);
         Task task = getTaskEntityById(id);
         Long taskOwnerId = task.getUser().getId();
         String title = task.getTitle();
+        task.setDeletedBy(auditService.getCurrentUserId());
+        taskRepository.saveAndFlush(task);
         taskRepository.delete(task);
+        taskRepository.flush();
         auditService.logAction(
                 "DELETE_TASK",
                 "TASK",
                 id,
                 "{\"title\":\"%s\",\"ownerUserId\":%d}".formatted(escapeJson(title), taskOwnerId));
+        publishTaskEvent(id, taskOwnerId, title, "DELETE_TASK");
         log.info("Deleted task {}", id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
+    public void restoreTask(Long id) {
+        log.info("Restoring task {}", id);
+        Task task = taskRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+
+        if (!task.isDeleted()) {
+            log.info("Task {} is already active", id);
+            return;
+        }
+
+        taskRepository.restoreById(id);
+        auditService.logAction(
+                "RESTORE_TASK",
+                "TASK",
+                id,
+                "{\"title\":\"%s\"}".formatted(escapeJson(task.getTitle())));
+        publishTaskEvent(task, "RESTORE_TASK");
+        log.info("Restored task {}", id);
+    }
+
     private Task getTaskEntityById(Long id) {
-        return taskRepository.findById(id)
+        return taskRepository.findWithUserById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 
@@ -166,5 +209,22 @@ public class TaskService {
         }
 
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private void publishTaskEvent(Task task, String updateType) {
+        publishTaskEvent(task.getId(), task.getUser().getId(), task.getTitle(), updateType);
+    }
+
+    private void publishTaskEvent(Long taskId, Long userId, String taskTitle, String updateType) {
+        TaskUpdatedEvent event = TaskUpdatedEvent.builder()
+                .version(1)
+                .taskId(taskId)
+                .userId(userId)
+                .taskTitle(taskTitle)
+                .updateType(updateType)
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
+
+        taskEventPublisher.publishAfterCommit(event);
     }
 }
