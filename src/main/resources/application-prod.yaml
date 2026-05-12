@@ -17,6 +17,18 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:task-management-notifications}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.portfolio.task_management_system.event
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 logging:
   level:
@@ -35,3 +47,10 @@ rate-limit:
   refill-duration: ${RATE_LIMIT_REFILL_DURATION:1m}
   cleanup-interval: ${RATE_LIMIT_CLEANUP_INTERVAL:5m}
   bucket-ttl: ${RATE_LIMIT_BUCKET_TTL:15m}
+
+app:
+  kafka:
+    topics:
+      task-events: ${TASK_EVENTS_TOPIC:task-events}
+  notifications:
+    digest-rate: ${NOTIFICATION_DIGEST_RATE:1h}
