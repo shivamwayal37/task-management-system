@@ -21,6 +21,7 @@ public class NotificationConsumer {
 
     @KafkaListener(topics = "${app.kafka.topics.task-events:task-events}")
     public void consume(TaskUpdatedEvent event) {
+        log.info("Received event {}", event);
         PendingNotification notification = PendingNotification.builder()
                 .userId(event.getUserId())
                 .taskId(event.getTaskId())
@@ -32,6 +33,7 @@ public class NotificationConsumer {
                 .build();
 
         pendingNotificationRepository.save(notification);
+        log.info("Saving notification");
         log.info("Stored pending notification type={} taskId={} userId={}",
                 event.getUpdateType(),
                 event.getTaskId(),

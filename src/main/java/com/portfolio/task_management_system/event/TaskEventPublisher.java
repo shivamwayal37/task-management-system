@@ -49,7 +49,7 @@ public class TaskEventPublisher {
                                     exception);
                             return;
                         }
-
+                        log.info("Publishing event {}", event);
                         log.info("Published task event type={} taskId={} userId={}",
                                 event.getUpdateType(),
                                 event.getTaskId(),
