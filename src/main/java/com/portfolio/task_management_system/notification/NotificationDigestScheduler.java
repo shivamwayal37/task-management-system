@@ -20,20 +20,24 @@ public class NotificationDigestScheduler {
 
     private final PendingNotificationRepository pendingNotificationRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     public NotificationDigestScheduler(PendingNotificationRepository pendingNotificationRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            EmailService emailService) {
         this.pendingNotificationRepository = pendingNotificationRepository;
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
-    @Scheduled(fixedRateString = "${app.notifications.digest-rate:1h}")
+    @Scheduled(fixedRateString = "${app.notifications.digest-rate:5s}")
     @Transactional
     public void processDigest() {
         List<PendingNotification> pendingNotifications =
                 pendingNotificationRepository.findByProcessedFalseOrderByCreatedAtAsc();
 
         if (pendingNotifications.isEmpty()) {
+            log.warn("pending notification is empty!");
             return;
         }
 
@@ -47,21 +51,28 @@ public class NotificationDigestScheduler {
             notification.setProcessed(true);
             notification.setProcessedAt(processedAt);
         });
+        pendingNotificationRepository.saveAll(pendingNotifications);
     }
 
     private void sendDigest(Long userId, List<PendingNotification> notifications) {
         User user = userRepository.findById(userId).orElse(null);
-        String recipient = user == null ? "unknown-user-%d".formatted(userId) : user.getEmail();
+        if (user == null) {
+            log.warn("Skipping digest for missing user {}", userId);
+            return;
+        }
 
         Map<Long, Long> updatesByTask = notifications.stream()
                 .collect(Collectors.groupingBy(PendingNotification::getTaskId, Collectors.counting()));
 
         log.info("Sending notification digest to {} with {} updates across {} tasks",
-                recipient,
+                user.getEmail(),
                 notifications.size(),
                 updatesByTask.size());
 
-        updatesByTask.forEach((taskId, count) ->
-                log.info("Digest item recipient={} taskId={} updates={}", recipient, taskId, count));
+        List<String> messages = notifications.stream()
+                .map(PendingNotification::getMessage)
+                .toList();
+
+        emailService.sendDigestEmail(user.getEmail(), user.getName(), messages);
     }
 }
