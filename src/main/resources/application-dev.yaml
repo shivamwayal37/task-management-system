@@ -32,8 +32,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: ${MAIL_PORT:587}
-    username: wayalshivam7@gmail.com
-    password: luyz emmh lixa azsh
+    username: xxxxxxxxxxxxxxx
+    password: xxxxxxxxxxxxxxx
     properties:
       mail:
         smtp:
@@ -50,8 +50,8 @@ logging:
 
 security:
   jwt:
-    # secret: ${JWT_SECRET:62f2f75c18764dd9be731dfb2d3c3c842667105ba718bc7eddfa459b6f264ca1}
-    secret: 62f2f75c18764dd9be731dfb2d3c3c842667105ba718bc7eddfa459b6f264ca1
+    
+    secret: xxxxxxxxxxxxxxxxxxx
     expiration-ms: ${JWT_EXPIRATION_MS:3000000}
 
 rate-limit:
