@@ -29,6 +29,17 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 logging:
   level:
@@ -54,3 +65,4 @@ app:
       task-events: ${TASK_EVENTS_TOPIC:task-events}
   notifications:
     digest-rate: ${NOTIFICATION_DIGEST_RATE:1h}
+    dashboard-url: ${NOTIFICATION_DASHBOARD_URL}
