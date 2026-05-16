@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 
 import com.portfolio.task_management_system.dto.CreateTaskRequest;
 import com.portfolio.task_management_system.dto.CreateUserRequest;
+import com.portfolio.task_management_system.dto.NotificationPreferenceDTO;
+import com.portfolio.task_management_system.dto.NotificationPreferenceRequest;
 import com.portfolio.task_management_system.dto.TaskDTO;
 import com.portfolio.task_management_system.dto.UserDTO;
 import com.portfolio.task_management_system.service.TaskService;
@@ -38,6 +40,17 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDTO> getCurrentUser() {
+        return ResponseEntity.ok(userService.getCurrentUser());
+    }
+
+    @PutMapping("/preferences/notifications")
+    public ResponseEntity<NotificationPreferenceDTO> updateNotificationPreference(
+            @Valid @RequestBody NotificationPreferenceRequest request) {
+        return ResponseEntity.ok(userService.updateCurrentUserNotificationPreference(request));
     }
 
     @GetMapping("/{id}")

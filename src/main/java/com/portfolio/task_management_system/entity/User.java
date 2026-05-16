@@ -28,6 +28,10 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationPreferenceMode notificationPreference = NotificationPreferenceMode.HOURLY_DIGEST;
+
     // One user → many tasks
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Task> tasks;

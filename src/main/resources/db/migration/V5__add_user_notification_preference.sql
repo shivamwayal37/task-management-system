@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN notification_preference VARCHAR(50) NOT NULL DEFAULT 'HOURLY_DIGEST';

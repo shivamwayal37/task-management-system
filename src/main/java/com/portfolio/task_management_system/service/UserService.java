@@ -4,13 +4,17 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.portfolio.task_management_system.audit.AuditService;
 import com.portfolio.task_management_system.dto.CreateUserRequest;
+import com.portfolio.task_management_system.dto.NotificationPreferenceDTO;
+import com.portfolio.task_management_system.dto.NotificationPreferenceRequest;
 import com.portfolio.task_management_system.dto.UserDTO;
+import com.portfolio.task_management_system.entity.NotificationPreferenceMode;
 import com.portfolio.task_management_system.entity.User;
 import com.portfolio.task_management_system.entity.UserRole;
 import com.portfolio.task_management_system.exception.UserNotFoundException;
@@ -70,6 +74,24 @@ public class UserService{
         return UserMapper.toDTO(user);
     }
 
+    public UserDTO getCurrentUser() {
+        User user = getCurrentUserEntity();
+        return UserMapper.toDTO(user);
+    }
+
+    public NotificationPreferenceDTO updateCurrentUserNotificationPreference(NotificationPreferenceRequest request) {
+        User user = getCurrentUserEntity();
+        user.setNotificationPreference(toNotificationPreferenceMode(request.getMode()));
+        User savedUser = userRepository.save(user);
+        auditService.logAction(
+                "UPDATE_NOTIFICATION_PREFERENCE",
+                "USER",
+                savedUser.getId(),
+                "{\"mode\":\"%s\"}".formatted(savedUser.getNotificationPreference()));
+
+        return new NotificationPreferenceDTO(savedUser.getNotificationPreference().name());
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @CacheEvict(value = "users", key = "#id")
     public UserDTO updateUser(Long id, CreateUserRequest request) {
@@ -109,11 +131,29 @@ public class UserService{
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
+    private User getCurrentUserEntity() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByName(username);
+        if (user == null) {
+            throw new UserNotFoundException(username);
+        }
+
+        return user;
+    }
+
     private UserRole toRole(String role) {
         try {
             return UserRole.valueOf(role.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Invalid user role: " + role);
+        }
+    }
+
+    private NotificationPreferenceMode toNotificationPreferenceMode(String mode) {
+        try {
+            return NotificationPreferenceMode.valueOf(mode.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("Invalid notification preference mode: " + mode);
         }
     }
 }
