@@ -35,6 +35,11 @@ public interface TaskRepository extends JpaRepository<Task, Long>{
     @Query(value = "SELECT * FROM tasks WHERE id = :id", nativeQuery = true)
     Optional<Task> findByIdIncludingDeleted(@Param("id") Long id);
 
+    @Query(value = "SELECT * FROM tasks WHERE deleted = true",
+            countQuery = "SELECT COUNT(*) FROM tasks WHERE deleted = true",
+            nativeQuery = true)
+    Page<Task> findDeletedTasks(Pageable pageable);
+
     @Modifying
     @Query(value = """
             UPDATE tasks
@@ -44,4 +49,8 @@ public interface TaskRepository extends JpaRepository<Task, Long>{
             WHERE id = :id
             """, nativeQuery = true)
     int restoreById(@Param("id") Long id);
+
+    @Modifying
+    @Query(value = "DELETE FROM tasks WHERE id = :id", nativeQuery = true)
+    int hardDeleteById(@Param("id") Long id);
 }

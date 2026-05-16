@@ -149,6 +149,48 @@ public class TaskService {
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
     @CacheEvict(value = "tasks", allEntries = true)
     @Transactional
+    public TaskDTO updateTaskStatus(Long id, String status) {
+        Task task = getTaskEntityById(id);
+        TaskStatus newStatus = toStatus(status);
+        validateStatusTransition(task.getStatus(), newStatus);
+
+        TaskStatus previousStatus = task.getStatus();
+        task.setStatus(newStatus);
+        Task savedTask = taskRepository.save(task);
+        auditService.logAction(
+                "STATUS_CHANGE",
+                "TASK",
+                savedTask.getId(),
+                "{\"before\":\"%s\",\"after\":\"%s\"}".formatted(previousStatus, savedTask.getStatus()));
+        publishTaskEvent(savedTask, "STATUS_CHANGE");
+
+        return TaskMapper.toDTO(savedTask);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
+    public TaskDTO assignTask(Long taskId, Long userId) {
+        Task task = getTaskEntityById(taskId);
+        User assignee = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        Long previousUserId = task.getUser().getId();
+        task.setUser(assignee);
+
+        Task savedTask = taskRepository.save(task);
+        auditService.logAction(
+                "ASSIGN_TASK",
+                "TASK",
+                savedTask.getId(),
+                "{\"beforeUserId\":%d,\"afterUserId\":%d}".formatted(previousUserId, assignee.getId()));
+        publishTaskEvent(savedTask, "ASSIGN_TASK");
+
+        return TaskMapper.toDTO(savedTask);
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or @authorizationService.isTaskOwner(#id, authentication.name)")
+    @CacheEvict(value = "tasks", allEntries = true)
+    @Transactional
     public void deleteTask(Long id){
         log.info("Deleting task {}", id);
         Task task = getTaskEntityById(id);
@@ -190,6 +232,25 @@ public class TaskService {
         log.info("Restored task {}", id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public Page<TaskDTO> getDeletedTasks(Pageable pageable) {
+        return taskRepository.findDeletedTasks(pageable).map(TaskMapper::toDTO);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void hardDeleteTask(Long id) {
+        Task task = taskRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+        taskRepository.hardDeleteById(id);
+        auditService.logAction(
+                "HARD_DELETE_TASK",
+                "TASK",
+                id,
+                "{\"title\":\"%s\"}".formatted(escapeJson(task.getTitle())));
+    }
+
     private Task getTaskEntityById(Long id) {
         return taskRepository.findWithUserById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
@@ -200,6 +261,23 @@ public class TaskService {
             return TaskStatus.valueOf(status.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Invalid task status: " + status);
+        }
+    }
+
+    private void validateStatusTransition(TaskStatus currentStatus, TaskStatus newStatus) {
+        if (currentStatus == newStatus) {
+            return;
+        }
+
+        boolean valid = switch (currentStatus) {
+            case TODO -> newStatus == TaskStatus.IN_PROGRESS;
+            case IN_PROGRESS -> newStatus == TaskStatus.COMPLETED;
+            case COMPLETED -> false;
+        };
+
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    "Invalid task status transition: %s -> %s".formatted(currentStatus, newStatus));
         }
     }
 
