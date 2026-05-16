@@ -67,3 +67,9 @@ app:
   notifications:
     digest-rate: ${NOTIFICATION_DIGEST_RATE:30s}
     dashboard-url: ${NOTIFICATION_DASHBOARD_URL:http://localhost:8080/dashboard}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics

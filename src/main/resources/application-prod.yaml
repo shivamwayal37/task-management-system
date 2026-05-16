@@ -66,3 +66,9 @@ app:
   notifications:
     digest-rate: ${NOTIFICATION_DIGEST_RATE:1h}
     dashboard-url: ${NOTIFICATION_DASHBOARD_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
