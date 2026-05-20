@@ -4,21 +4,32 @@ spring:
     cache-names: users,tasks
     redis:
       time-to-live: ${CACHE_TTL:10m}
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
-      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:3}
       idle-timeout: ${DB_POOL_IDLE_TIMEOUT:30000}
+
   data:
     redis:
-      host: ${REDIS_HOST}
+      host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:task-management-notifications}
       auto-offset-reset: earliest
@@ -29,11 +40,12 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -65,7 +77,7 @@ app:
       task-events: ${TASK_EVENTS_TOPIC:task-events}
   notifications:
     digest-rate: ${NOTIFICATION_DIGEST_RATE:1h}
-    dashboard-url: ${NOTIFICATION_DASHBOARD_URL}
+    dashboard-url: ${NOTIFICATION_DASHBOARD_URL:http://localhost:8080/dashboard}
 
 management:
   endpoints:
