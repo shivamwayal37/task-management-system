@@ -14,8 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.portfolio.task_management_system.audit.AuditLogService;
 import com.portfolio.task_management_system.dto.AuditLogDTO;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/audit-logs")
+@Tag(name = "Audit APIs", description = "Audit logging and tracking APIs")
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
@@ -25,6 +29,7 @@ public class AuditLogController {
     }
 
     @GetMapping
+    @Operation(summary = "Search audit logs", description = "Searches audit logs by user, action and timestamp range.")
     public ResponseEntity<Page<AuditLogDTO>> searchAuditLogs(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String action,

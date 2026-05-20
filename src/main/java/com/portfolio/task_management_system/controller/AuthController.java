@@ -15,11 +15,16 @@ import com.portfolio.task_management_system.audit.AuditService;
 import com.portfolio.task_management_system.repository.UserRepository;
 import com.portfolio.task_management_system.utils.JwtUtil;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication APIs", description = "Authentication and JWT login operations")
 @Slf4j
 public class AuthController {
 
@@ -37,6 +42,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login and get JWT", description = "Authenticates a user and returns a JWT bearer token.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Login successful"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials"),
+            @ApiResponse(responseCode = "400", description = "Invalid request body")
+    })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         log.info("Login attempt for user {}", request.getName());
         authenticationManager.authenticate(
