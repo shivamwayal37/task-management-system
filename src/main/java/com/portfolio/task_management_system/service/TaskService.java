@@ -18,6 +18,7 @@ import com.portfolio.task_management_system.entity.User;
 import com.portfolio.task_management_system.event.TaskEventPublisher;
 import com.portfolio.task_management_system.event.TaskUpdatedEvent;
 import com.portfolio.task_management_system.exception.TaskNotFoundException;
+import com.portfolio.task_management_system.exception.TaskStateTransitionException;
 import com.portfolio.task_management_system.exception.UserNotFoundException;
 import com.portfolio.task_management_system.mapper.TaskMapper;
 import com.portfolio.task_management_system.repository.TaskRepository;
@@ -151,6 +152,7 @@ public class TaskService {
     @Transactional
     public TaskDTO updateTaskStatus(Long id, String status) {
         Task task = getTaskEntityById(id);
+        validateTaskIsActive(task);
         TaskStatus newStatus = toStatus(status);
         validateStatusTransition(task.getStatus(), newStatus);
 
@@ -276,8 +278,15 @@ public class TaskService {
         };
 
         if (!valid) {
-            throw new IllegalArgumentException(
+            throw new TaskStateTransitionException(
                     "Invalid task status transition: %s -> %s".formatted(currentStatus, newStatus));
+        }
+    }
+
+    private void validateTaskIsActive(Task task) {
+        if (task.isDeleted()) {
+            throw new TaskStateTransitionException(
+                    "Cannot update status for deleted task: %d".formatted(task.getId()));
         }
     }
 
