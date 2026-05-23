@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.portfolio.task_management_system.audit.AuditService;
@@ -62,7 +63,15 @@ class TaskServiceStateEngineTest {
                 eq("TASK"),
                 eq(1L),
                 eq("{\"before\":\"TODO\",\"after\":\"IN_PROGRESS\"}"));
-        verify(taskEventPublisher).publishAfterCommit(any(TaskUpdatedEvent.class));
+        ArgumentCaptor<TaskUpdatedEvent> eventCaptor = ArgumentCaptor.forClass(TaskUpdatedEvent.class);
+        verify(taskEventPublisher).publishAfterCommit(eventCaptor.capture());
+        TaskUpdatedEvent event = eventCaptor.getValue();
+        assertThat(event.getVersion()).isEqualTo(1);
+        assertThat(event.getTaskId()).isEqualTo(1L);
+        assertThat(event.getUserId()).isEqualTo(10L);
+        assertThat(event.getTaskTitle()).isEqualTo("State engine test task");
+        assertThat(event.getUpdateType()).isEqualTo("STATUS_CHANGE");
+        assertThat(event.getTimestamp()).isNotNull();
     }
 
     @Test
@@ -81,7 +90,15 @@ class TaskServiceStateEngineTest {
                 eq("TASK"),
                 eq(2L),
                 eq("{\"before\":\"IN_PROGRESS\",\"after\":\"COMPLETED\"}"));
-        verify(taskEventPublisher).publishAfterCommit(any(TaskUpdatedEvent.class));
+        ArgumentCaptor<TaskUpdatedEvent> eventCaptor = ArgumentCaptor.forClass(TaskUpdatedEvent.class);
+        verify(taskEventPublisher).publishAfterCommit(eventCaptor.capture());
+        TaskUpdatedEvent event = eventCaptor.getValue();
+        assertThat(event.getVersion()).isEqualTo(1);
+        assertThat(event.getTaskId()).isEqualTo(2L);
+        assertThat(event.getUserId()).isEqualTo(10L);
+        assertThat(event.getTaskTitle()).isEqualTo("State engine test task");
+        assertThat(event.getUpdateType()).isEqualTo("STATUS_CHANGE");
+        assertThat(event.getTimestamp()).isNotNull();
     }
 
     @Test
