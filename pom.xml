@@ -196,6 +196,7 @@
 				</executions>
 			</plugin>
 		</plugins>
+		<finalName>task-management-system</finalName>
 	</build>
 
 </project>
