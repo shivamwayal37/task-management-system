@@ -166,25 +166,7 @@ Return Response
 
 The project follows a layered monolithic architecture with event-driven components for asynchronous workflows.
 
-```text
-Controller Layer
-  ↓
-Service Layer
-  ↓
-Repository Layer
-  ↓
-Database
-```
-
-Supporting infrastructure:
-
-```text
-Spring Boot App
-  ├── PostgreSQL
-  ├── Redis
-  ├── Kafka
-  └── Zookeeper
-```
+![Architecture](assets/Architecture.png)
 
 **Why layered architecture?**
 
