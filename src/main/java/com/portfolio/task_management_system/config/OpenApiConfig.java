@@ -43,7 +43,7 @@ public class OpenApiConfig {
                         .license(new License().name("MIT License")))
                 .externalDocs(new ExternalDocumentation()
                         .description("Project Repository")
-                        .url("https://github.com/your-username/task-management-system"))
+                        .url("https://github.com/shivamwayal37/task-management-system"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,

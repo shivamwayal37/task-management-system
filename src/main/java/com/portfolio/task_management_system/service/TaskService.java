@@ -68,7 +68,7 @@ public class TaskService {
         }
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @Cacheable(
             value = "tasks",
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString() + '-' + (#status == null ? 'ALL' : #status)")

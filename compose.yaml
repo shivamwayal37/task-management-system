@@ -59,47 +59,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - backend-network
-
-  app:
-    container_name: task-management-system
-    build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-      SERVER_PORT: 8080
-
-      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-taskdb}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres}
-
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KAFKA_CONSUMER_GROUP: ${KAFKA_CONSUMER_GROUP:-task-management-notifications}
-      TASK_EVENTS_TOPIC: ${TASK_EVENTS_TOPIC:-task-events}
-
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3000000}
-
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-
-      NOTIFICATION_DIGEST_RATE: ${NOTIFICATION_DIGEST_RATE:-1h}
-      NOTIFICATION_DASHBOARD_URL: ${NOTIFICATION_DASHBOARD_URL:-http://localhost:8080/dashboard}
-    networks:
-      - backend-network
-
+      
 volumes:
   postgres_data:
 
