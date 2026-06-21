@@ -16,9 +16,22 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST}
-      port: ${REDIS_PORT:6379}
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    ssl:
+      key-store-type: ${KAFKA_SSL_KEYSTORE_TYPE:PKCS12}
+      key-store-location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      key-store-password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
+      key-password: ${KAFKA_SSL_KEY_PASSWORD:}
+      trust-store-type: ${KAFKA_SSL_TRUSTSTORE_TYPE:JKS}
+      trust-store-location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      trust-store-password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:task-management-notifications}
       auto-offset-reset: earliest
@@ -29,6 +42,7 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}

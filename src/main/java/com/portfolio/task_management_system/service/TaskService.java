@@ -5,6 +5,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +26,13 @@ import com.portfolio.task_management_system.repository.TaskRepository;
 import com.portfolio.task_management_system.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
+import java.util.Set;
 
 @Service
 @Slf4j
 public class TaskService {
+    private static final Set<String> ALLOWED_TASK_SORT_FIELDS = Set.of(
+            "id", "title", "description", "status", "createdAt", "updatedAt");
     
     @Autowired
     private TaskRepository taskRepository;
@@ -74,23 +78,26 @@ public class TaskService {
             key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString() + '-' + (#status == null ? 'ALL' : #status)")
     @Transactional(readOnly = true)
     public Page<TaskDTO> getTasks(Pageable pageable, String status) {
+        Pageable sanitizedPageable = sanitizeTaskPageable(pageable);
         log.info("Fetching tasks page={} size={} sort={} status={}",
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                pageable.getSort(),
+                sanitizedPageable.getPageNumber(),
+                sanitizedPageable.getPageSize(),
+                sanitizedPageable.getSort(),
                 status);
 
         if (status == null || status.isBlank()) {
-            return taskRepository.findAll(pageable).map(TaskMapper::toDTO);
+            return taskRepository.findAll(sanitizedPageable).map(TaskMapper::toDTO);
         }
 
-        return taskRepository.findByStatus(toStatus(status), pageable).map(TaskMapper::toDTO);
+        return taskRepository.findByStatus(toStatus(status), sanitizedPageable).map(TaskMapper::toDTO);
     }
 
     @PreAuthorize("hasRole('ADMIN') or @authorizationService.isCurrentUser(#userId, authentication.name)")
     @Transactional(readOnly = true)
     public Page<TaskDTO> getTasksByUserId(Long userId, Pageable pageable) {
         log.info("Fetching tasks for user {}", userId);
+        Pageable sanitizedPageable = sanitizeTaskPageable(pageable);
+
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException(userId);
         }
@@ -107,7 +114,7 @@ public class TaskService {
         return TaskMapper.toDTO(task);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public TaskDTO getTask(String title){
         log.info("Searching task by title {}", title);
@@ -313,5 +320,23 @@ public class TaskService {
                 .build();
 
         taskEventPublisher.publishAfterCommit(event);
+    }
+
+    private Pageable sanitizeTaskPageable(Pageable pageable) {
+        Sort sanitizedSort = Sort.unsorted();
+        for (Sort.Order order : pageable.getSort()) {
+            if (ALLOWED_TASK_SORT_FIELDS.contains(order.getProperty())) {
+                sanitizedSort = sanitizedSort.and(Sort.by(new Sort.Order(order.getDirection(), order.getProperty())));
+            }
+        }
+
+        if (sanitizedSort.isUnsorted()) {
+            sanitizedSort = Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        return org.springframework.data.domain.PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                sanitizedSort);
     }
 }

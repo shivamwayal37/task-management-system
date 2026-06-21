@@ -45,7 +45,7 @@ public class UserService{
         return UserMapper.toDTO(savedUser);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public List<UserDTO> getAllUsers() {
         log.info("Fetching all users");
         return userRepository.findAll()
@@ -63,7 +63,7 @@ public class UserService{
         return UserMapper.toDTO(user);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public UserDTO getUser(String name){
         log.info("Fetching user by name {}", name);
         User user = userRepository.findByName(name);
@@ -92,7 +92,7 @@ public class UserService{
         return new NotificationPreferenceDTO(savedUser.getNotificationPreference().name());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @CacheEvict(value = "users", key = "#id")
     public UserDTO updateUser(Long id, CreateUserRequest request) {
         log.info("Updating user {}", id);

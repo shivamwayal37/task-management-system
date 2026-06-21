@@ -30,6 +30,19 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    ssl:
+      key-store-type: ${KAFKA_SSL_KEYSTORE_TYPE:PKCS12}
+      key-store-location: ${KAFKA_SSL_KEYSTORE_LOCATION:}
+      key-store-password: ${KAFKA_SSL_KEYSTORE_PASSWORD:}
+      key-password: ${KAFKA_SSL_KEY_PASSWORD:}
+      trust-store-type: ${KAFKA_SSL_TRUSTSTORE_TYPE:JKS}
+      trust-store-location: ${KAFKA_SSL_TRUSTSTORE_LOCATION:}
+      trust-store-password: ${KAFKA_SSL_TRUSTSTORE_PASSWORD:}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     consumer:
       group-id: ${KAFKA_CONSUMER_GROUP:task-management-notifications}
       auto-offset-reset: earliest
@@ -42,8 +55,8 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
     properties:
@@ -63,7 +76,7 @@ logging:
 security:
   jwt:
     secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:3000000}
+    expiration-ms: ${JWT_EXPIRATION_MS}
 
 rate-limit:
   capacity: ${RATE_LIMIT_CAPACITY:100}
@@ -76,7 +89,7 @@ app:
     topics:
       task-events: ${TASK_EVENTS_TOPIC:task-events}
   notifications:
-    digest-rate: ${NOTIFICATION_DIGEST_RATE:1h}
+    digest-rate: ${NOTIFICATION_DIGEST_RATE:30s}
     dashboard-url: ${NOTIFICATION_DASHBOARD_URL:http://localhost:8080/dashboard}
 
 management:
