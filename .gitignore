@@ -37,3 +37,4 @@ build/
 **/.env
 .attach_pid*
 src/main/resources/application-dev.yaml
+secrets/
